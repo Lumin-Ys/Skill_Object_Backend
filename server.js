@@ -1,17 +1,25 @@
 /**
- * AI 一键部署 - 后端服务（最小可用版）
+ * AI 一键部署 - 后端服务
  *
  * 端口：默认 3000，可通过 PORT 环境变量修改
  *
- * 路由：
- *   GET  /                           管理后台 UI
- *   POST /api/auth/register          创建用户，返回 Token
- *   GET  /api/auth/me                当前用户信息
- *   POST /api/deploy                 接收 zip 上传，返回 taskId
- *   GET  /api/deploy/status          轮询部署状态
- *   GET  /api/admin/tasks            列出所有任务（管理员）
- *   DELETE /api/admin/tasks/:id      删除任务
- *   GET  /sites/:taskId/             已部署站点的静态托管
+ * 页面：
+ *   GET  /                           官网
+ *   GET  /console                    控制台（需登录）
+ *
+ * 认证：
+ *   POST /api/auth/register          注册账号（不发 Skill Token）
+ *   POST /api/auth/login             登录控制台
+ *   POST /api/auth/logout            退出
+ *   GET  /api/auth/me                当前登录用户
+ *
+ * 购买：
+ *   GET  /api/plans                  套餐列表
+ *   POST /api/billing/purchase       购买套餐后签发 Skill Token
+ *
+ * 部署（Skill Token + 有效套餐）：
+ *   POST /api/deploy
+ *   GET  /api/deploy/status
  */
 
 const express = require('express');
@@ -20,22 +28,33 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 
-const { createUser, requireAuth } = require('./lib/auth');
+const {
+  registerUser,
+  loginUser,
+  logoutSession,
+  purchasePlan,
+  consumeDeployQuota,
+  updateProfile,
+  updateSlug,
+  rotateSkillToken,
+  publicUser,
+  requireSession,
+  requireSkill,
+} = require('./lib/auth');
+const { listPlans } = require('./lib/plans');
 const deployer = require('./lib/deployer');
 const storage = require('./lib/storage');
 
 const PORT = process.env.PORT || 3000;
-
-// ========================= Express 初始化 =========================
+const PUBLIC_DIR = path.join(__dirname, 'public');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// multer 配置：接收 zip 文件，落盘到 data/uploads/
 const upload = multer({
   dest: deployer.UPLOADS_DIR,
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB
+  limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter(req, file, cb) {
     if (file.mimetype === 'application/zip' ||
         file.mimetype === 'application/x-zip-compressed' ||
@@ -47,52 +66,148 @@ const upload = multer({
   },
 });
 
-// ========================= 认证路由 =========================
+function sendPage(res, name) {
+  res.sendFile(path.join(PUBLIC_DIR, name));
+}
 
-/**
- * POST /api/auth/register
- * Body: { name: "用户名" }
- * → { id, name, token, domain, createdAt }
- */
-app.post('/api/auth/register', (req, res) => {
-  const { name } = req.body || {};
-  if (!name || typeof name !== 'string') {
-    return res.status(400).json({ error: '缺少 name 字段' });
-  }
-  if (name.length < 2 || name.length > 30) {
-    return res.status(400).json({ error: '用户名长度需在 2-30 之间' });
-  }
-  const user = createUser(name.trim());
-  res.json(user);
-});
+// ========================= 页面 =========================
 
-/**
- * GET /api/auth/me
- * Header: Authorization: Bearer <token>
- */
-app.get('/api/auth/me', requireAuth, (req, res) => {
+app.get('/', (req, res) => sendPage(res, 'index.html'));
+app.get('/console', (req, res) => sendPage(res, 'console.html'));
+app.get('/purchase', (req, res) => sendPage(res, 'purchase.html'));
+app.use(express.static(PUBLIC_DIR, { index: false }));
+
+// ========================= 公开接口 =========================
+
+app.get('/api/public/stats', (req, res) => {
+  const db = storage.read();
   res.json({
-    id: req.user.id,
-    name: req.user.name,
-    domain: req.user.domain,
-    createdAt: req.user.createdAt,
+    users: Object.keys(db.users).length,
+    tasks: Object.keys(db.tasks).length,
   });
 });
 
-// ========================= 部署路由 =========================
+app.get('/api/plans', (req, res) => {
+  res.json({ plans: listPlans() });
+});
 
-/**
- * POST /api/deploy
- * Header: Authorization: Bearer <token>
- * Body: multipart/form-data, field: "file" (zip)
- * → { taskId, status }
- */
-app.post('/api/deploy', requireAuth, upload.single('file'), (req, res) => {
+// ========================= 认证 =========================
+
+app.post('/api/auth/register', (req, res, next) => {
+  try {
+    const { name, password } = req.body || {};
+    const result = registerUser(name, password);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.post('/api/auth/login', (req, res, next) => {
+  try {
+    const { name, password } = req.body || {};
+    if (!name || !password) {
+      return res.status(400).json({ error: '请输入用户名和密码' });
+    }
+    const result = loginUser(name, password);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.post('/api/auth/logout', requireSession, (req, res) => {
+  logoutSession(req.sessionToken);
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/me', requireSession, (req, res) => {
+  res.json({ user: publicUser(req.user) });
+});
+
+app.patch('/api/me/profile', requireSession, (req, res, next) => {
+  try {
+    const user = updateProfile(req.user.id, { displayName: req.body?.displayName });
+    res.json({ user });
+  } catch (e) { next(e); }
+});
+
+app.patch('/api/me/domain', requireSession, (req, res, next) => {
+  try {
+    const user = updateSlug(req.user.id, req.body?.slug);
+    res.json({ user });
+  } catch (e) { next(e); }
+});
+
+app.post('/api/me/token/rotate', requireSession, (req, res, next) => {
+  try {
+    const user = rotateSkillToken(req.user.id);
+    res.json({ user });
+  } catch (e) { next(e); }
+});
+
+app.get('/api/me/overview', requireSession, (req, res) => {
+  const tasks = deployer.listTasksByUser(req.user.id);
+  const user = publicUser(req.user);
+  res.json({
+    user,
+    stats: {
+      projects: tasks.length,
+      success: tasks.filter(t => t.status === 'success').length,
+      failed: tasks.filter(t => t.status === 'failed').length,
+      running: tasks.filter(t => !['success', 'failed'].includes(t.status)).length,
+      online: tasks.filter(t => t.status === 'success').length,
+      deployUsed: user.deployUsed,
+      deployQuota: user.deployQuota,
+    },
+  });
+});
+
+// ========================= 购买 =========================
+
+app.post('/api/billing/purchase', requireSession, (req, res, next) => {
+  try {
+    const { planId } = req.body || {};
+    if (!planId) return res.status(400).json({ error: '缺少 planId' });
+    const result = purchasePlan(req.user.id, planId);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ========================= 控制台：我的任务 =========================
+
+app.get('/api/me/tasks', requireSession, (req, res) => {
+  res.json({ tasks: deployer.listTasksByUser(req.user.id) });
+});
+
+app.patch('/api/me/tasks/:id', requireSession, (req, res, next) => {
+  try {
+    const task = deployer.updateTaskMeta(req.params.id, req.user.id, {
+      name: req.body?.name,
+      subdomain: req.body?.subdomain,
+    });
+    res.json({ task });
+  } catch (e) { next(e); }
+});
+
+app.delete('/api/me/tasks/:id', requireSession, (req, res) => {
+  const task = deployer.getTask(req.params.id);
+  if (!task) return res.status(404).json({ error: '任务不存在' });
+  if (task.userId !== req.user.id) {
+    return res.status(403).json({ error: '无权删除该任务' });
+  }
+  res.json({ ok: deployer.deleteTask(req.params.id) });
+});
+
+// ========================= 部署（Skill Token）=========================
+
+app.post('/api/deploy', requireSkill, upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: '缺少文件字段 file' });
   }
 
-  // 给上传文件改个有意义的名字（保留 .zip 后缀）
   const zipPath = req.file.path + '.zip';
   try {
     fs.renameSync(req.file.path, zipPath);
@@ -101,15 +216,12 @@ app.post('/api/deploy', requireAuth, upload.single('file'), (req, res) => {
     return res.status(500).json({ error: '保存上传文件失败' });
   }
 
+  consumeDeployQuota(req.user.id);
   const { taskId, status } = deployer.createTask(req.user, zipPath);
   res.json({ taskId, status });
 });
 
-/**
- * GET /api/deploy/status?taskId=xxx
- * Header: Authorization: Bearer <token>
- */
-app.get('/api/deploy/status', requireAuth, (req, res) => {
+app.get('/api/deploy/status', requireSkill, (req, res) => {
   const { taskId } = req.query;
   if (!taskId) {
     return res.status(400).json({ error: '缺少 taskId' });
@@ -122,58 +234,21 @@ app.get('/api/deploy/status', requireAuth, (req, res) => {
     return res.status(403).json({ error: '无权访问该任务' });
   }
 
-  // 返回 Skill 期望的字段
   res.json({
-    status: task.status,        // pending/building/.../success/failed
+    status: task.status,
     message: task.message,
     progress: task.progress,
-    url: task.url,              // 成功时的访问地址
-    domain: task.domain,        // 用户专属域名
+    url: task.url,
+    domain: task.domain,
     error: task.error,
     projectType: task.projectType,
     taskId,
   });
 });
 
-// ========================= 管理员路由 =========================
+// ========================= 已部署站点 =========================
 
-/**
- * GET /api/admin/tasks - 列出所有任务
- */
-app.get('/api/admin/tasks', (req, res) => {
-  res.json({ tasks: deployer.listAllTasks() });
-});
-
-/**
- * GET /api/admin/users - 列出所有用户
- */
-app.get('/api/admin/users', (req, res) => {
-  const db = storage.read();
-  // 不返回 token 明文
-  const users = Object.values(db.users).map(u => ({
-    id: u.id,
-    name: u.name,
-    domain: u.domain,
-    token: u.token,
-    createdAt: u.createdAt,
-  }));
-  res.json({ users });
-});
-
-/**
- * DELETE /api/admin/tasks/:id
- */
-app.delete('/api/admin/tasks/:id', (req, res) => {
-  const ok = deployer.deleteTask(req.params.id);
-  res.json({ ok });
-});
-
-// ========================= 已部署站点静态托管 =========================
-
-/**
- * GET /sites/:taskId/*  →  托管 data/deployed/<taskId>/
- */
-app.use('/sites/:taskId', (req, res, next) => {
+app.use('/sites/:taskId', (req, res) => {
   const taskId = req.params.taskId;
   const task = deployer.getTask(taskId);
   if (!task) return res.status(404).send('任务不存在');
@@ -183,11 +258,9 @@ app.use('/sites/:taskId', (req, res, next) => {
   const deployDir = task.deployDir;
   if (!fs.existsSync(deployDir)) return res.status(404).send('已部署文件不存在');
 
-  // 把 /sites/<taskId>/ 映射到 deployDir
   const subPath = req.path.replace(/\/+$/, '') || '/';
   let filePath = path.join(deployDir, subPath);
 
-  // 安全：防止跳出
   if (!filePath.startsWith(deployDir)) {
     return res.status(403).send('Forbidden');
   }
@@ -202,7 +275,6 @@ app.use('/sites/:taskId', (req, res, next) => {
     }
   }
 
-  // 设置合理的 Content-Type
   const ext = path.extname(filePath).toLowerCase();
   const mime = MIME[ext] || 'application/octet-stream';
   res.setHeader('Content-Type', mime);
@@ -228,39 +300,29 @@ const MIME = {
   '.ttf':  'font/ttf',
 };
 
-// ========================= 后台管理 UI =========================
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// 兜底 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Not Found', path: req.path });
 });
 
-// 错误处理
 app.use((err, req, res, next) => {
-  console.error('[error]', err);
-  res.status(err.status || 500).json({
+  const status = err.status || 500;
+  if (status >= 500) console.error('[error]', err);
+  res.status(status).json({
     error: err.message || 'Internal Server Error',
   });
 });
 
-// ========================= 启动 =========================
-
-deployer.UPLOADS_DIR && deployer.DEPLOYED_DIR && require('fs'); // 触发模块加载
 app.listen(PORT, () => {
   console.log('');
   console.log('================================================');
   console.log('  AI 一键部署 - 后端服务');
   console.log('================================================');
-  console.log(`  管理后台:    http://localhost:${PORT}/`);
+  console.log(`  官网:        http://localhost:${PORT}/`);
+  console.log(`  控制台:      http://localhost:${PORT}/console`);
   console.log(`  部署 API:    http://localhost:${PORT}/api/deploy`);
-  console.log(`  状态 API:    http://localhost:${PORT}/api/deploy/status`);
   console.log(`  数据目录:    ${path.join(__dirname, 'data')}`);
   console.log('================================================');
   console.log('');
-  console.log('提示：首次使用请打开管理后台注册一个用户获取 Token');
+  console.log('提示：注册账号后需购买套餐，才会签发 Skill Token');
   console.log('');
 });

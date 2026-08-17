@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>控制台 · Deploy Skill</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            side: '#0C1424',
+            brand: { 50:'#EEF2FF', 100:'#D9E2FF', 500:'#2F5BFF', 600:'#244CE0', 700:'#1B3CB8' },
+            ink: '#1B2437',
+            muted: '#64748B',
+            line: '#E2E8F0',
+            page: '#F3F5F9',
+          },
+          fontFamily: {
+            sans: ['IBM Plex Sans', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+            mono: ['IBM Plex Mono', 'Menlo', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: 'IBM Plex Sans', 'Noto Sans SC', sans-serif; background: #F3F5F9; color: #1B2437; }
+    .font-mono { font-family: 'IBM Plex Mono', Menlo, monospace; }
+    .screen { min-height: 100vh; min-height: 100dvh; }
+    .nav-item { color: rgba(255,255,255,.62); }
+    .nav-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+    .nav-item.active { background: rgba(47,91,255,.18); color: #fff; }
+    input:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(47,91,255,.15); border-color: #2F5BFF; }
+    .table-row:hover { background: #F8FAFC; }
+    .modal-bg { background: rgba(12,20,36,.45); }
+  </style>
+</head>
+<body class="antialiased text-ink">
+
+  <!-- ==================== 登录 / 注册 ==================== -->
+  <div id="authView" class="hidden screen grid lg:grid-cols-[1.05fr_0.95fr]">
+    <aside class="hidden lg:flex flex-col justify-between bg-side text-white p-12">
+      <a href="/" class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-brand-500 flex items-center justify-center font-bold">D</div>
+        <div>
+          <div class="font-semibold tracking-tight">Deploy Skill</div>
+          <div class="text-[11px] text-white/40">Enterprise Console</div>
+        </div>
+      </a>
+      <div>
+        <h1 class="text-4xl font-semibold leading-tight mb-4">管理你的部署<br>像管理一台云主机</h1>
+        <p class="text-white/50 max-w-sm leading-relaxed">登录后查看 Token、项目数量、运行状态，并自定义二级域名。注册不会开通 Skill，需购买套餐后使用。</p>
+      </div>
+      <p class="text-xs text-white/30">Token 仅本地存储 · 绝不改写用户代码</p>
+    </aside>
+    <section class="flex items-center justify-center p-6 sm:p-10 bg-white">
+      <div class="w-full max-w-[400px]">
+        <a href="/" class="lg:hidden flex items-center gap-2 mb-10 text-sm text-muted">← 返回官网</a>
+        <h2 class="text-2xl font-semibold mb-1" id="authTitle">登录控制台</h2>
+        <p class="text-sm text-muted mb-8">使用账号密码进入工作台</p>
+        <div class="flex gap-6 mb-6 text-sm border-b border-line">
+          <button type="button" id="tabLogin" onclick="setAuthTab('login')" class="pb-3 font-semibold text-brand-500 border-b-2 border-brand-500">登录</button>
+          <button type="button" id="tabRegister" onclick="setAuthTab('register')" class="pb-3 text-muted">注册</button>
+        </div>
+        <form onsubmit="submitAuth(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-muted mb-1.5" for="authName">用户名</label>
+            <input id="authName" required maxlength="30" class="w-full px-3.5 py-2.5 rounded-md border border-line bg-white text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-muted mb-1.5" for="authPassword">密码</label>
+            <input id="authPassword" type="password" required minlength="6" class="w-full px-3.5 py-2.5 rounded-md border border-line bg-white text-sm">
+          </div>
+          <div id="confirmWrap" class="hidden">
+            <label class="block text-xs font-medium text-muted mb-1.5" for="authConfirm">确认密码</label>
+            <input id="authConfirm" type="password" minlength="6" class="w-full px-3.5 py-2.5 rounded-md border border-line bg-white text-sm">
+          </div>
+          <p id="authError" class="hidden text-sm text-red-600"></p>
+          <button id="authSubmit" class="w-full py-2.5 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold">登录</button>
+        </form>
+        <p class="mt-6 text-xs text-muted">注册仅创建控制台账号。购买套餐后才会签发 Skill Token。</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== 控制台工作台 ==================== -->
+  <div id="appView" class="hidden screen lg:grid" style="grid-template-columns: 232px 1fr;">
+    <aside class="bg-side text-white flex flex-col">
+      <a href="/" class="h-14 px-5 flex items-center gap-3 border-b border-white/10">
+        <div class="w-8 h-8 rounded-md bg-brand-500 flex items-center justify-center text-sm font-bold">D</div>
+        <div>
+          <div class="text-sm font-semibold leading-none">Deploy Skill</div>
+          <div class="text-[10px] text-white/35 mt-1">控制台</div>
+        </div>
+      </a>
+      <nav class="p-3 space-y-0.5 flex-1">
+        <button class="nav-item active w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" data-view="overview" onclick="showView('overview')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+          概览
+        </button>
+        <button class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" data-view="projects" onclick="showView('projects')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12V4.5A1.5 1.5 0 0 1 3.5 3H7l1.5 2H13.5A1.5 1.5 0 0 1 15 6.5V12a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12z"/></svg>
+          项目
+        </button>
+        <button class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" data-view="credentials" onclick="showView('credentials')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="6" width="12" height="8" rx="1.5"/><path d="M5 6V4.5A3 3 0 0 1 11 4.5V6"/></svg>
+          凭证
+        </button>
+        <button class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" data-view="domains" onclick="showView('domains')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c1.8 2 2.6 4 2.6 6s-.8 4-2.6 6c-1.8-2-2.6-4-2.6-6s.8-4 2.6-6z"/></svg>
+          域名
+        </button>
+        <button class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" data-view="billing" onclick="showView('billing')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="4" width="12" height="9" rx="1.5"/><path d="M2 7h12"/></svg>
+          费用
+        </button>
+        <button class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" data-view="settings" onclick="showView('settings')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="2.2"/><path d="M8 2.5v1.5M8 12v1.5M2.5 8h1.5M12 8h1.5M4 4l1.1 1.1M10.9 10.9L12 12M12 4l-1.1 1.1M5.1 10.9L4 12"/></svg>
+          设置
+        </button>
+      </nav>
+      <div class="p-4 border-t border-white/10 text-xs text-white/35" id="sidePlan">套餐加载中</div>
+    </aside>
+
+    <div class="flex flex-col min-w-0 bg-page">
+      <header class="h-14 bg-white border-b border-line flex items-center justify-between px-6">
+        <div class="text-sm text-muted" id="crumb">工作台 / 概览</div>
+        <div class="flex items-center gap-3">
+          <span id="planPill" class="hidden sm:inline text-xs px-2 py-1 rounded bg-brand-50 text-brand-700 font-medium">未开通</span>
+          <div class="flex items-center gap-2 pl-3 border-l border-line">
+            <div class="w-7 h-7 rounded-full bg-brand-500 text-white text-xs font-semibold flex items-center justify-center" id="avatar">U</div>
+            <span class="text-sm font-medium" id="headerName">—</span>
+            <button onclick="logout()" class="text-xs text-muted hover:text-ink ml-2">退出</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="flex-1 overflow-auto p-6">
+        <div id="unpaidBanner" class="hidden mb-5 px-4 py-3 rounded-md bg-amber-50 border border-amber-200 text-sm text-amber-900">
+          当前账号尚未开通 Skill。购买套餐后才会签发 Token，Agent 才能部署。
+          <button onclick="showView('billing')" class="ml-2 font-semibold text-brand-600">去开通</button>
+        </div>
+
+        <!-- 概览 -->
+        <section data-panel="overview" class="space-y-5">
+          <div>
+            <h1 class="text-xl font-semibold">概览</h1>
+            <p class="text-sm text-muted mt-1">查看本账号的部署规模与资源状态</p>
+          </div>
+          <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div class="bg-white border border-line rounded-lg p-4">
+              <div class="text-xs text-muted mb-2">部署项目</div>
+              <div class="text-3xl font-semibold tabular-nums" id="kpiProjects">0</div>
+            </div>
+            <div class="bg-white border border-line rounded-lg p-4">
+              <div class="text-xs text-muted mb-2">运行中</div>
+              <div class="text-3xl font-semibold tabular-nums text-emerald-600" id="kpiOnline">0</div>
+            </div>
+            <div class="bg-white border border-line rounded-lg p-4">
+              <div class="text-xs text-muted mb-2">本月已用</div>
+              <div class="text-3xl font-semibold tabular-nums" id="kpiUsed">0</div>
+            </div>
+            <div class="bg-white border border-line rounded-lg p-4">
+              <div class="text-xs text-muted mb-2">套餐配额</div>
+              <div class="text-3xl font-semibold tabular-nums" id="kpiQuota">—</div>
+            </div>
+          </div>
+          <div class="bg-white border border-line rounded-lg">
+            <div class="px-5 py-3.5 border-b border-line flex items-center justify-between">
+              <h2 class="text-sm font-semibold">最近项目</h2>
+              <button onclick="showView('projects')" class="text-xs text-brand-600">查看全部</button>
+            </div>
+            <div id="recentList" class="p-5 text-sm text-muted">加载中...</div>
+          </div>
+        </section>
+
+        <!-- 项目 -->
+        <section data-panel="projects" class="hidden space-y-5">
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <h1 class="text-xl font-semibold">项目</h1>
+              <p class="text-sm text-muted mt-1">管理本账号已部署的应用，支持改名与绑定二级域名</p>
+            </div>
+            <button onclick="loadTasks()" class="px-3 py-2 text-sm border border-line bg-white rounded-md hover:bg-page">刷新</button>
+          </div>
+          <div class="bg-white border border-line rounded-lg overflow-hidden">
+            <div id="projectTable" class="text-sm text-muted p-8 text-center">加载中...</div>
+          </div>
+        </section>
+
+        <!-- 凭证 -->
+        <section data-panel="credentials" class="hidden space-y-5">
+          <div>
+            <h1 class="text-xl font-semibold">凭证</h1>
+            <p class="text-sm text-muted mt-1">Skill Token 用于 Agent 调用部署 API，请勿写入仓库或发送到对话</p>
+          </div>
+          <div id="tokenEmpty" class="hidden bg-white border border-line rounded-lg p-8 text-center">
+            <p class="text-sm text-muted mb-4">尚未开通套餐，无法签发 Token。</p>
+            <button onclick="showView('billing')" class="px-4 py-2 rounded-md bg-brand-500 text-white text-sm font-semibold">去购买</button>
+          </div>
+          <div id="tokenCard" class="hidden bg-white border border-line rounded-lg p-6">
+            <div class="text-xs text-muted mb-2">Skill Token</div>
+            <div class="font-mono text-sm break-all bg-page border border-line rounded-md px-4 py-3 mb-4" id="tokenValue"></div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="toggleToken()" class="px-3 py-2 text-sm border border-line rounded-md bg-white" id="toggleTokenBtn">显示</button>
+              <button onclick="copyToken(this)" class="px-3 py-2 text-sm rounded-md bg-brand-500 text-white font-medium">复制 Token</button>
+              <button onclick="copyInstall(this)" class="px-3 py-2 text-sm border border-line rounded-md bg-white">复制安装命令</button>
+              <button onclick="rotateToken()" class="px-3 py-2 text-sm border border-line rounded-md bg-white text-red-600">轮换 Token</button>
+            </div>
+            <p class="text-xs text-muted mt-4">轮换后旧 Token 立即失效，需重新写入本地 Skill 配置。</p>
+          </div>
+        </section>
+
+        <!-- 域名 -->
+        <section data-panel="domains" class="hidden space-y-5">
+          <div>
+            <h1 class="text-xl font-semibold">域名</h1>
+            <p class="text-sm text-muted mt-1">设置账号默认二级域名。单个项目也可在「项目」中单独绑定。</p>
+          </div>
+          <div class="bg-white border border-line rounded-lg p-6 max-w-xl">
+            <label class="block text-xs font-medium text-muted mb-2">默认二级域名</label>
+            <div class="flex items-center gap-2">
+              <input id="slugInput" class="flex-1 px-3.5 py-2.5 rounded-md border border-line text-sm font-mono" placeholder="your-app">
+              <span class="text-sm text-muted whitespace-nowrap" id="rootDomainLabel">.dev.local</span>
+            </div>
+            <p class="text-xs text-muted mt-2">3-20 位，字母开头，仅小写字母 / 数字 / 连字符。全局唯一。</p>
+            <p id="slugError" class="hidden text-sm text-red-600 mt-2"></p>
+            <p id="slugOk" class="hidden text-sm text-emerald-600 mt-2">已保存</p>
+            <button onclick="saveSlug()" class="mt-4 px-4 py-2 rounded-md bg-brand-500 text-white text-sm font-semibold">保存域名</button>
+          </div>
+          <div class="bg-white border border-line rounded-lg">
+            <div class="px-5 py-3.5 border-b border-line text-sm font-semibold">项目自定义域名</div>
+            <div id="domainList" class="p-5 text-sm text-muted">加载中...</div>
+          </div>
+        </section>
+
+        <!-- 费用 -->
+        <section data-panel="billing" class="hidden space-y-5">
+          <div>
+            <h1 class="text-xl font-semibold">费用</h1>
+            <p class="text-sm text-muted mt-1">购买或续费套餐后签发 Token。当前为模拟支付。</p>
+          </div>
+          <div class="bg-white border border-line rounded-lg p-5">
+            <div class="text-xs text-muted">当前套餐</div>
+            <div class="text-lg font-semibold mt-1" id="billPlan">未开通</div>
+            <div class="text-sm text-muted mt-1" id="billExpire"></div>
+          </div>
+          <div id="planGrid" class="grid md:grid-cols-3 gap-4"></div>
+        </section>
+
+        <!-- 设置 -->
+        <section data-panel="settings" class="hidden space-y-5">
+          <div>
+            <h1 class="text-xl font-semibold">设置</h1>
+            <p class="text-sm text-muted mt-1">账号资料仅对本控制台生效，不影响登录用户名</p>
+          </div>
+          <div class="bg-white border border-line rounded-lg p-6 max-w-xl space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-muted mb-1.5">登录用户名</label>
+              <input id="loginName" disabled class="w-full px-3.5 py-2.5 rounded-md border border-line bg-page text-sm text-muted">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-muted mb-1.5">显示名称</label>
+              <input id="displayName" maxlength="30" class="w-full px-3.5 py-2.5 rounded-md border border-line text-sm">
+            </div>
+            <p id="profileOk" class="hidden text-sm text-emerald-600">已保存</p>
+            <button onclick="saveProfile()" class="px-4 py-2 rounded-md bg-brand-500 text-white text-sm font-semibold">保存</button>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- 编辑项目弹窗 -->
+  <div id="modal" class="hidden fixed inset-0 z-50 modal-bg flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg w-full max-w-md shadow-xl border border-line">
+      <div class="px-5 py-4 border-b border-line font-semibold text-sm">编辑项目</div>
+      <div class="p-5 space-y-4">
+        <input type="hidden" id="editId">
+        <div>
+          <label class="block text-xs text-muted mb-1.5">项目名称</label>
+          <input id="editName" class="w-full px-3 py-2.5 rounded-md border border-line text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-muted mb-1.5">项目二级域名（可选）</label>
+          <div class="flex items-center gap-2">
+            <input id="editSub" class="flex-1 px-3 py-2.5 rounded-md border border-line text-sm font-mono" placeholder="留空则使用账号默认域名">
+            <span class="text-xs text-muted" id="editRoot">.dev.local</span>
+          </div>
+        </div>
+        <p id="editError" class="hidden text-sm text-red-600"></p>
+      </div>
+      <div class="px-5 py-3 border-t border-line flex justify-end gap-2">
+        <button onclick="closeModal()" class="px-3 py-2 text-sm border border-line rounded-md">取消</button>
+        <button onclick="saveProject()" class="px-3 py-2 text-sm rounded-md bg-brand-500 text-white font-semibold">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SESSION_KEY = 'deploy_session';
+    const CRUMBS = { overview:'工作台 / 概览', projects:'工作台 / 项目', credentials:'工作台 / 凭证', domains:'工作台 / 域名', billing:'工作台 / 费用', settings:'工作台 / 设置' };
+    let authMode = 'login';
+    let currentUser = null;
+    let tasks = [];
+    let plans = [];
+    let tokenRevealed = false;
+
+    const session = () => localStorage.getItem(SESSION_KEY) || '';
+    const headers = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + session() });
+
+    function setAuthTab(mode) {
+      authMode = mode;
+      const login = mode === 'login';
+      document.getElementById('authTitle').textContent = login ? '登录控制台' : '注册账号';
+      document.getElementById('tabLogin').className = 'pb-3 ' + (login ? 'font-semibold text-brand-500 border-b-2 border-brand-500' : 'text-muted');
+      document.getElementById('tabRegister').className = 'pb-3 ' + (!login ? 'font-semibold text-brand-500 border-b-2 border-brand-500' : 'text-muted');
+      document.getElementById('confirmWrap').classList.toggle('hidden', login);
+      document.getElementById('authSubmit').textContent = login ? '登录' : '注册并进入控制台';
+      document.getElementById('authError').classList.add('hidden');
+    }
+
+    async function submitAuth(e) {
+      e.preventDefault();
+      const name = document.getElementById('authName').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const err = document.getElementById('authError');
+      err.classList.add('hidden');
+      if (authMode === 'register' && password !== document.getElementById('authConfirm').value) {
+        err.textContent = '两次密码不一致'; err.classList.remove('hidden'); return;
+      }
+      const r = await fetch(authMode === 'register' ? '/api/auth/register' : '/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, password }),
+      });
+      const data = await r.json();
+      if (!r.ok) { err.textContent = data.error || '操作失败'; err.classList.remove('hidden'); return; }
+      localStorage.setItem(SESSION_KEY, data.sessionToken);
+      currentUser = data.user;
+      await bootApp();
+    }
+
+    async function logout() {
+      try { await fetch('/api/auth/logout', { method: 'POST', headers: headers() }); } catch {}
+      localStorage.removeItem(SESSION_KEY);
+      currentUser = null;
+      document.getElementById('authView').classList.remove('hidden');
+      document.getElementById('appView').classList.add('hidden');
+    }
+
+    async function boot() {
+      if (!session()) {
+        document.getElementById('authView').classList.remove('hidden');
+        return;
+      }
+      const r = await fetch('/api/auth/me', { headers: headers() });
+      if (!r.ok) { localStorage.removeItem(SESSION_KEY); document.getElementById('authView').classList.remove('hidden'); return; }
+      currentUser = (await r.json()).user;
+      await bootApp();
+    }
+
+    async function bootApp() {
+      document.getElementById('authView').classList.add('hidden');
+      document.getElementById('appView').classList.remove('hidden');
+      plans = (await fetch('/api/plans').then(r => r.json())).plans || [];
+      renderUser();
+      renderPlans();
+      await loadTasks();
+      const hash = (location.hash || '#overview').slice(1);
+      showView(['overview','projects','credentials','domains','billing','settings'].includes(hash) ? hash : 'overview');
+    }
+
+    function renderUser() {
+      const u = currentUser;
+      document.getElementById('headerName').textContent = u.displayName || u.name;
+      document.getElementById('avatar').textContent = (u.displayName || u.name).charAt(0).toUpperCase();
+      document.getElementById('planPill').textContent = u.subscribed ? u.planName : '未开通';
+      document.getElementById('sidePlan').textContent = u.subscribed
+        ? (u.planName + ' · 至 ' + new Date(u.planExpiresAt).toLocaleDateString('zh-CN'))
+        : '未开通套餐';
+      document.getElementById('unpaidBanner').classList.toggle('hidden', !!u.subscribed);
+      document.getElementById('loginName').value = u.name;
+      document.getElementById('displayName').value = u.displayName || u.name;
+      document.getElementById('slugInput').value = u.slug || '';
+      document.getElementById('rootDomainLabel').textContent = '.' + (u.rootDomain || 'dev.local');
+      document.getElementById('editRoot').textContent = '.' + (u.rootDomain || 'dev.local');
+      document.getElementById('billPlan').textContent = u.subscribed ? u.planName : '未开通';
+      document.getElementById('billExpire').textContent = u.subscribed ? ('有效期至 ' + new Date(u.planExpiresAt).toLocaleString('zh-CN')) : '购买后签发 Skill Token';
+      document.getElementById('tokenEmpty').classList.toggle('hidden', !!u.subscribed);
+      document.getElementById('tokenCard').classList.toggle('hidden', !u.subscribed);
+      if (u.subscribed) renderToken();
+    }
+
+    function maskToken(t) { return t ? t.slice(0, 8) + '••••••••••••' + t.slice(-8) : ''; }
+    function renderToken() {
+      const t = currentUser.skillToken || '';
+      document.getElementById('tokenValue').textContent = tokenRevealed ? t : maskToken(t);
+      document.getElementById('toggleTokenBtn').textContent = tokenRevealed ? '隐藏' : '显示';
+    }
+    function toggleToken() { tokenRevealed = !tokenRevealed; renderToken(); }
+
+    function showView(name) {
+      document.querySelectorAll('[data-panel]').forEach(el => el.classList.toggle('hidden', el.getAttribute('data-panel') !== name));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.getAttribute('data-view') === name));
+      document.getElementById('crumb').textContent = CRUMBS[name] || '工作台';
+      history.replaceState(null, '', '#' + name);
+    }
+
+    async function loadTasks() {
+      const r = await fetch('/api/me/tasks', { headers: headers() });
+      if (!r.ok) return;
+      tasks = (await r.json()).tasks || [];
+      const ov = await fetch('/api/me/overview', { headers: headers() }).then(x => x.json());
+      const s = ov.stats || {};
+      document.getElementById('kpiProjects').textContent = s.projects || 0;
+      document.getElementById('kpiOnline').textContent = s.online || 0;
+      document.getElementById('kpiUsed').textContent = s.deployUsed || 0;
+      document.getElementById('kpiQuota').textContent = s.deployQuota === -1 ? '不限' : (s.deployQuota || '—');
+      renderRecent();
+      renderProjects();
+      renderDomains();
+    }
+
+    function statusBadge(status) {
+      const map = {
+        success: 'bg-emerald-50 text-emerald-700',
+        failed: 'bg-red-50 text-red-700',
+        pending: 'bg-amber-50 text-amber-700',
+      };
+      return `<span class="px-2 py-0.5 rounded text-[11px] font-medium ${map[status] || 'bg-blue-50 text-blue-700'}">${status}</span>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    }
+
+    function renderRecent() {
+      const list = tasks.slice(0, 5);
+      const el = document.getElementById('recentList');
+      if (!list.length) { el.innerHTML = '还没有项目。开通套餐后，对 Agent 说「帮我部署上线」。'; return; }
+      el.innerHTML = `<div class="divide-y divide-line -m-5">${list.map(t => `
+        <div class="flex items-center justify-between px-5 py-3">
+          <div>
+            <div class="font-medium text-ink">${escapeHtml(t.name || t.id.slice(0,10))}</div>
+            <div class="text-xs text-muted mt-0.5">${escapeHtml(t.subdomain ? t.subdomain + '.' + (currentUser.rootDomain||'dev.local') : currentUser.domain)}</div>
+          </div>
+          ${statusBadge(t.status)}
+        </div>`).join('')}</div>`;
+    }
+
+    function renderProjects() {
+      const el = document.getElementById('projectTable');
+      if (!tasks.length) { el.innerHTML = '<div class="p-8 text-center text-muted">暂无部署项目</div>'; return; }
+      el.innerHTML = `
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-page text-xs text-muted">
+            <tr>
+              <th class="text-left font-medium px-4 py-3">项目</th>
+              <th class="text-left font-medium px-4 py-3">二级域名</th>
+              <th class="text-left font-medium px-4 py-3">类型</th>
+              <th class="text-left font-medium px-4 py-3">状态</th>
+              <th class="text-left font-medium px-4 py-3">访问</th>
+              <th class="text-left font-medium px-4 py-3">创建时间</th>
+              <th class="text-right font-medium px-4 py-3">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tasks.map(t => `
+              <tr class="table-row border-t border-line">
+                <td class="px-4 py-3 font-medium">${escapeHtml(t.name || t.id.slice(0,12))}</td>
+                <td class="px-4 py-3 font-mono text-xs">${escapeHtml(t.subdomain || currentUser.slug || '—')}</td>
+                <td class="px-4 py-3">${t.projectType || '—'}</td>
+                <td class="px-4 py-3">${statusBadge(t.status)}</td>
+                <td class="px-4 py-3">${t.status === 'success' ? `<a class="text-brand-600 hover:underline" href="/sites/${t.id}/" target="_blank">打开</a>` : '—'}</td>
+                <td class="px-4 py-3 text-muted text-xs">${new Date(t.createdAt).toLocaleString('zh-CN')}</td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                  <button class="text-brand-600 text-xs mr-3" onclick="openEdit('${t.id}')">编辑</button>
+                  <button class="text-red-600 text-xs" onclick="removeTask('${t.id}')">删除</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        </div>`;
+    }
+
+    function renderDomains() {
+      const custom = tasks.filter(t => t.subdomain);
+      const el = document.getElementById('domainList');
+      const root = currentUser.rootDomain || 'dev.local';
+      if (!custom.length) { el.textContent = '暂无项目级自定义域名。可在「项目」中为单个应用绑定。'; return; }
+      el.innerHTML = custom.map(t => `
+        <div class="flex justify-between py-2 border-b border-line last:border-0">
+          <span class="font-medium">${escapeHtml(t.name || t.id)}</span>
+          <span class="font-mono text-xs text-muted">${escapeHtml(t.subdomain)}.${root}</span>
+        </div>`).join('');
+    }
+
+    function renderPlans() {
+      document.getElementById('planGrid').innerHTML = plans.map(p => `
+        <article class="bg-white border ${p.id==='pro'?'border-brand-500':'border-line'} rounded-lg p-5">
+          <div class="text-xs text-muted">${p.name}${p.tag ? ' · ' + p.tag : ''}</div>
+          <div class="text-2xl font-semibold mt-1">¥${p.price}<span class="text-sm font-normal text-muted"> / 月</span></div>
+          <p class="text-sm text-muted mt-2 mb-4">${p.desc}</p>
+          <button onclick="buyPlan('${p.id}', ${p.price}, '${p.name}')" class="w-full py-2 rounded-md ${p.id==='pro'?'bg-brand-500 text-white':'border border-line bg-white'} text-sm font-semibold">立即购买</button>
+        </article>`).join('');
+    }
+
+    async function buyPlan(planId, price, name) {
+      if (!confirm(`确认购买「${name}」？将模拟支付 ¥${price}。`)) return;
+      const r = await fetch('/api/billing/purchase', { method:'POST', headers: headers(), body: JSON.stringify({ planId }) });
+      const data = await r.json();
+      if (!r.ok) return alert(data.error || '购买失败');
+      currentUser = data.user;
+      tokenRevealed = true;
+      renderUser();
+      showView('credentials');
+    }
+
+    async function saveSlug() {
+      const err = document.getElementById('slugError');
+      const ok = document.getElementById('slugOk');
+      err.classList.add('hidden'); ok.classList.add('hidden');
+      const r = await fetch('/api/me/domain', { method:'PATCH', headers: headers(), body: JSON.stringify({ slug: document.getElementById('slugInput').value.trim() }) });
+      const data = await r.json();
+      if (!r.ok) { err.textContent = data.error || '保存失败'; err.classList.remove('hidden'); return; }
+      currentUser = data.user;
+      ok.classList.remove('hidden');
+      renderUser();
+      await loadTasks();
+    }
+
+    async function saveProfile() {
+      const r = await fetch('/api/me/profile', { method:'PATCH', headers: headers(), body: JSON.stringify({ displayName: document.getElementById('displayName').value.trim() }) });
+      const data = await r.json();
+      if (!r.ok) return alert(data.error || '保存失败');
+      currentUser = data.user;
+      renderUser();
+      document.getElementById('profileOk').classList.remove('hidden');
+      setTimeout(() => document.getElementById('profileOk').classList.add('hidden'), 1600);
+    }
+
+    function copyText(text, btn) {
+      const done = () => { if (!btn) return; const o = btn.innerHTML; btn.innerHTML = '已复制'; setTimeout(() => btn.innerHTML = o, 1200); };
+      navigator.clipboard.writeText(text).then(done).catch(() => {
+        const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
+      });
+    }
+    function copyToken(btn) { copyText(currentUser.skillToken, btn); }
+    function copyInstall(btn) {
+      copyText('npx skills add Lumin-Ys/Skill_Object -y -g && node ~/.agents/skills/deploy-skill/index.js --token=' + currentUser.skillToken, btn);
+    }
+    async function rotateToken() {
+      if (!confirm('轮换后旧 Token 立即失效，确定继续？')) return;
+      const r = await fetch('/api/me/token/rotate', { method: 'POST', headers: headers() });
+      const data = await r.json();
+      if (!r.ok) return alert(data.error || '轮换失败');
+      currentUser = data.user;
+      tokenRevealed = true;
+      renderUser();
+    }
+
+    function openEdit(id) {
+      const t = tasks.find(x => x.id === id);
+      if (!t) return;
+      document.getElementById('editId').value = id;
+      document.getElementById('editName').value = t.name || '';
+      document.getElementById('editSub').value = t.subdomain || '';
+      document.getElementById('editError').classList.add('hidden');
+      document.getElementById('modal').classList.remove('hidden');
+    }
+    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+    async function saveProject() {
+      const id = document.getElementById('editId').value;
+      const err = document.getElementById('editError');
+      err.classList.add('hidden');
+      const r = await fetch('/api/me/tasks/' + id, {
+        method: 'PATCH', headers: headers(),
+        body: JSON.stringify({ name: document.getElementById('editName').value.trim(), subdomain: document.getElementById('editSub').value.trim() }),
+      });
+      const data = await r.json();
+      if (!r.ok) { err.textContent = data.error || '保存失败'; err.classList.remove('hidden'); return; }
+      closeModal();
+      await loadTasks();
+    }
+
+    async function removeTask(id) {
+      if (!confirm('确认删除该项目？线上文件将一并清除。')) return;
+      await fetch('/api/me/tasks/' + id, { method: 'DELETE', headers: headers() });
+      await loadTasks();
+    }
+
+    setInterval(() => { if (document.visibilityState === 'visible' && session() && currentUser) loadTasks(); }, 4000);
+    boot();
+  </script>
+</body>
+</html>

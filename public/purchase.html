@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>购买套餐 · Agent Ready</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700;900&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            deep: '#05070F',
+            panel: '#0B1220',
+            brand: {
+              50:  '#EEF3FF',
+              100: '#D6E2FF',
+              400: '#6B93FF',
+              500: '#3B6EFF',
+              600: '#2A58E8',
+              700: '#1E42C4',
+            },
+            ice:    '#4EE0C5',
+            ink:    '#12141C',
+            muted:  '#7A849C',
+            line:   '#E6E9F2',
+            paper:  '#F6F7FB',
+          },
+          fontFamily: {
+            display: ['Sora', 'Noto Sans SC', 'sans-serif'],
+            sans: ['Noto Sans SC', 'Sora', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Menlo', 'monospace'],
+          },
+          boxShadow: {
+            glow: '0 0 80px rgba(59,110,255,0.28)',
+            cta:  '0 12px 32px rgba(59,110,255,0.32)',
+            lift: '0 24px 60px rgba(8,12,28,0.12)',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --deep: #05070F;
+      --panel: #0B1220;
+      --brand: #3B6EFF;
+      --ice: #4EE0C5;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Noto Sans SC', 'Sora', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--deep);
+      color: #F2F4FA;
+    }
+    .font-display { font-family: 'Sora', 'Noto Sans SC', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', Menlo, monospace; }
+    .glass-card {
+      background: rgba(11, 18, 32, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .reveal { animation: fadeUp 0.5s ease both; }
+    .selected-plan {
+      border-color: rgba(59, 110, 255, 0.5) !important;
+      box-shadow: 0 0 40px rgba(59, 110, 255, 0.15);
+    }
+  </style>
+</head>
+<body class="bg-deep text-white antialiased min-h-screen">
+
+  <!-- 顶栏 -->
+  <header class="sticky top-0 z-50 glass-card border-b border-white/8">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-[10px] bg-gradient-to-br from-brand-400 to-brand-700 flex items-center justify-center shadow-glow">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 11.5L8 3.5L13 11.5H3Z" stroke="white" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M6.2 11.5L8 8.4L9.8 11.5" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-display font-semibold tracking-tight text-sm">Deploy Skill</div>
+          <div class="text-[10px] text-white/40 tracking-[0.1em]">Agent Ready</div>
+        </div>
+      </a>
+      <div class="flex items-center gap-4">
+        <a href="/console" class="text-sm text-white/60 hover:text-white transition">返回控制台</a>
+        <a href="/" class="px-4 py-2 rounded-lg border border-white/15 text-sm hover:bg-white/5 transition">
+          首页
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-5xl mx-auto px-6 py-12">
+    <!-- 页面标题 -->
+    <div class="text-center mb-12 reveal">
+      <h1 class="font-display text-4xl font-black tracking-tight mb-3">选择您的套餐</h1>
+      <p class="text-white/50 text-lg">注册后购买，即可用 Agent 一键部署项目</p>
+    </div>
+
+    <!-- 套餐卡片 -->
+    <div class="grid md:grid-cols-3 gap-5 mb-12">
+      <!-- 入门版 -->
+      <article class="glass-card rounded-2xl p-7 hover:border-white/15 transition cursor-pointer reveal" onclick="selectPlan('starter', this)">
+        <div class="text-sm text-white/50 mb-2">入门版</div>
+        <div class="font-display text-4xl font-bold mb-1">¥29<span class="text-base font-medium text-white/40"> / 月</span></div>
+        <p class="text-sm text-white/45 mb-6">个人试用体验</p>
+        <ul class="text-sm text-white/70 space-y-2.5 mb-8">
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 20 次部署 / 月
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 风险扫描
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 专属测试域名
+          </li>
+          <li class="flex items-center gap-2 text-white/40">
+            <span>—</span> 优先队列
+          </li>
+        </ul>
+        <button class="w-full py-3 rounded-lg border border-white/15 hover:bg-white/8 font-semibold transition">
+          选择入门版
+        </button>
+      </article>
+
+      <!-- 专业版 -->
+      <article class="glass-card rounded-2xl p-7 border-brand-500/40 shadow-glow relative cursor-pointer reveal" onclick="selectPlan('pro', this)" id="proPlan">
+        <span class="absolute -top-3 left-7 px-3 py-0.5 rounded-full bg-brand-500 text-[11px] font-semibold">推荐</span>
+        <div class="text-sm text-brand-400 mb-2">专业版</div>
+        <div class="font-display text-4xl font-bold mb-1">¥99<span class="text-base font-medium text-white/40"> / 月</span></div>
+        <p class="text-sm text-white/45 mb-6">独立开发者与小团队</p>
+        <ul class="text-sm text-white/70 space-y-2.5 mb-8">
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 不限次数部署
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 风险扫描
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 优先队列
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 任务历史保留
+          </li>
+        </ul>
+        <button class="w-full py-3 rounded-lg bg-brand-500 hover:bg-brand-600 font-semibold shadow-cta transition">
+          选择专业版
+        </button>
+      </article>
+
+      <!-- 团队版 -->
+      <article class="glass-card rounded-2xl p-7 hover:border-white/15 transition cursor-pointer reveal" onclick="selectPlan('team', this)">
+        <div class="text-sm text-white/50 mb-2">团队版</div>
+        <div class="font-display text-4xl font-bold mb-1">¥299<span class="text-base font-medium text-white/40"> / 月</span></div>
+        <p class="text-sm text-white/45 mb-6">团队协作与高频交付</p>
+        <ul class="text-sm text-white/70 space-y-2.5 mb-8">
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 不限次数部署
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 多成员席位
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 审计日志
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-green-400">✓</span> 工单支持
+          </li>
+        </ul>
+        <button class="w-full py-3 rounded-lg border border-white/15 hover:bg-white/8 font-semibold transition">
+          选择团队版
+        </button>
+      </article>
+    </div>
+
+    <!-- 购买表单 -->
+    <div class="glass-card rounded-2xl p-8 reveal" id="purchaseForm" style="display: none;">
+      <h2 class="font-display text-xl font-semibold mb-6">完成购买</h2>
+
+      <!-- 登录状态 -->
+      <div class="mb-6">
+        <div class="text-sm text-white/50 mb-3">步骤 1：确认账号</div>
+        <div id="authResult" class="text-sm text-white/70">正在检查登录状态...</div>
+      </div>
+
+      <!-- 支付方式 -->
+      <div class="mb-6" id="paymentSection">
+        <div class="text-sm text-white/50 mb-3">步骤 2：选择支付方式</div>
+        <div class="grid grid-cols-2 gap-3 mb-6">
+          <button class="p-4 rounded-xl border border-white/10 hover:border-brand-500/50 text-left transition" onclick="selectPayment('wechat')">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">💳</span>
+              <div>
+                <div class="text-sm font-medium">微信支付</div>
+                <div class="text-xs text-white/40">推荐</div>
+              </div>
+            </div>
+          </button>
+          <button class="p-4 rounded-xl border border-white/10 hover:border-brand-500/50 text-left transition" onclick="selectPayment('alipay')">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">💰</span>
+              <div>
+                <div class="text-sm font-medium">支付宝</div>
+                <div class="text-xs text-white/40">快捷安全</div>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 确认购买 -->
+      <div id="confirmSection" style="display: none;">
+        <div class="rounded-xl bg-panel/60 border border-white/10 p-5 mb-6">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-white/60">套餐</span>
+            <span class="font-medium" id="selectedPlanName">专业版</span>
+          </div>
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-white/60">价格</span>
+            <span class="font-display text-xl font-bold text-brand-400" id="selectedPlanPrice">¥99</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-white/60">周期</span>
+            <span class="text-sm">每月自动续费</span>
+          </div>
+        </div>
+        <button onclick="confirmPurchase()" id="payBtn" class="w-full py-4 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-semibold shadow-cta transition">
+          确认支付 ¥99
+        </button>
+        <p class="text-center text-xs text-white/30 mt-3">支付成功后 Token 将自动显示</p>
+      </div>
+    </div>
+
+    <!-- 支付成功 -->
+    <div class="glass-card rounded-2xl p-10 text-center reveal" id="successSection" style="display: none;">
+      <div class="text-6xl mb-4">🎉</div>
+      <h2 class="font-display text-2xl font-bold mb-2">购买成功！</h2>
+      <p class="text-white/50 mb-6">您的 Token 已生成，请妥善保存</p>
+      <div class="rounded-xl bg-panel/80 border border-white/10 p-5 max-w-md mx-auto mb-6">
+        <div class="text-[11px] text-white/40 mb-2">您的 Token</div>
+        <div class="font-mono text-sm text-ice break-all" id="newToken">-</div>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <button onclick="copyNewToken()" class="px-6 py-3 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-medium transition">
+          📋 复制 Token
+        </button>
+        <a href="/console" class="px-6 py-3 rounded-lg bg-white/10 hover:bg-white/15 text-white font-medium transition">
+          前往控制台 →
+        </a>
+      </div>
+    </div>
+
+    <!-- 常见问题 -->
+    <div class="mt-16 reveal">
+      <h3 class="font-display text-xl font-semibold mb-6 text-center">常见问题</h3>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="glass-card rounded-xl p-5">
+          <div class="font-medium mb-2">支付安全吗？</div>
+          <p class="text-sm text-white/50">支付由第三方平台处理，我们不会存储您的支付信息。</p>
+        </div>
+        <div class="glass-card rounded-xl p-5">
+          <div class="font-medium mb-2">可以退款吗？</div>
+          <p class="text-sm text-white/50">七天内可申请退款，联系客服处理。</p>
+        </div>
+        <div class="glass-card rounded-xl p-5">
+          <div class="font-medium mb-2">如何续费？</div>
+          <p class="text-sm text-white/50">套餐到期前会自动续费，也可手动取消。</p>
+        </div>
+        <div class="glass-card rounded-xl p-5">
+          <div class="font-medium mb-2">企业发票？</div>
+          <p class="text-sm text-white/50">团队版可开具增值税普通发票，联系客服申请。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SESSION_KEY = 'deploy_session';
+    let selectedPlan = 'pro';
+    let selectedPayment = null;
+    let skillToken = null;
+
+    const planPrices = { starter: 29, pro: 99, team: 299 };
+    const planNames = { starter: '入门版', pro: '专业版', team: '团队版' };
+
+    function headers() {
+      return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem(SESSION_KEY) || '') };
+    }
+
+    async function ensureLogin() {
+      const token = localStorage.getItem(SESSION_KEY);
+      if (!token) {
+        document.getElementById('authResult').innerHTML = '请先 <a class="text-brand-400 underline" href="/console">登录控制台</a> 再购买。';
+        return false;
+      }
+      const r = await fetch('/api/auth/me', { headers: headers() });
+      if (!r.ok) {
+        localStorage.removeItem(SESSION_KEY);
+        document.getElementById('authResult').innerHTML = '登录已过期，请先 <a class="text-brand-400 underline" href="/console">登录控制台</a>。';
+        return false;
+      }
+      const { user } = await r.json();
+      document.getElementById('authResult').innerHTML = '当前账号：<span class="text-white font-medium">' + user.name + '</span>';
+      return true;
+    }
+
+    function selectPlan(plan, el) {
+      selectedPlan = plan;
+      document.querySelectorAll('[onclick^="selectPlan"]').forEach(e => e.classList.remove('selected-plan'));
+      el.classList.add('selected-plan');
+      document.getElementById('purchaseForm').style.display = 'block';
+      document.getElementById('purchaseForm').scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('selectedPlanName').textContent = planNames[plan];
+      document.getElementById('selectedPlanPrice').textContent = '¥' + planPrices[plan];
+      document.getElementById('payBtn').textContent = '确认支付 ¥' + planPrices[plan];
+    }
+
+    function selectPayment(type) {
+      selectedPayment = type;
+      document.getElementById('confirmSection').style.display = 'block';
+    }
+
+    async function confirmPurchase() {
+      if (!(await ensureLogin())) return alert('请先登录控制台');
+      if (!selectedPayment) return alert('请选择支付方式');
+      const btn = document.getElementById('payBtn');
+      btn.disabled = true;
+      btn.textContent = '支付中...';
+      const r = await fetch('/api/billing/purchase', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ planId: selectedPlan }),
+      });
+      const data = await r.json();
+      btn.disabled = false;
+      btn.textContent = '确认支付 ¥' + planPrices[selectedPlan];
+      if (!r.ok) return alert(data.error || '购买失败');
+      skillToken = data.user && data.user.skillToken;
+      document.getElementById('purchaseForm').style.display = 'none';
+      document.getElementById('successSection').style.display = 'block';
+      document.getElementById('newToken').textContent = skillToken || '请到控制台查看';
+    }
+
+    function copyNewToken() {
+      if (!skillToken) return;
+      navigator.clipboard.writeText(skillToken).then(() => alert('Token 已复制'));
+    }
+
+    ensureLogin();
+    selectPlan('pro', document.getElementById('proPlan'));
+  </script>
+</body>
+</html>
