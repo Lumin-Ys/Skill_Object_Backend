@@ -1,0 +1,21 @@
+{
+  "name": "deploy-skill-backend",
+  "version": "1.0.0",
+  "description": "AI 一键部署 Skill 的配套后端 - 最小可用部署平台",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5",
+    "adm-zip": "^0.5.16"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "AI Deploy Platform",
+  "license": "MIT"
+}

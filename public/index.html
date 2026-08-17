@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 一键部署 · 平台管理后台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#eff4ff',
+              100: '#dbe6ff',
+              500: '#3860F4',
+              600: '#2c4fd9',
+              700: '#1f3bb8',
+            },
+            ink:    '#1D212D',
+            muted:  '#858EAA',
+            line:   '#E5E7EB',
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', '"Fira Code"', 'Menlo', 'monospace'],
+          },
+          boxShadow: {
+            card: '0 2px 12px rgba(15, 23, 42, 0.06)',
+            cta:  '0 8px 24px rgba(56, 96, 244, 0.24)',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .hero-bg {
+      background:
+        radial-gradient(ellipse 60% 60% at 50% 0%, rgba(56,96,244,0.10), transparent 60%),
+        linear-gradient(180deg, #fafbff 0%, #ffffff 100%);
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(56,96,244,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,96,244,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .step-arrow::after {
+      content: '';
+      position: absolute;
+      right: -28px; top: 50%; transform: translateY(-50%);
+      width: 24px; height: 2px;
+      background: repeating-linear-gradient(90deg, #cbd5e1 0 4px, transparent 4px 8px);
+    }
+    @media (max-width: 768px) { .step-arrow::after { display: none; } }
+    .code-block { font-family: "JetBrains Mono", "Fira Code", Menlo, monospace; }
+    .pulse-dot::before {
+      content: ''; position: absolute; left: -8px; top: 50%; transform: translateY(-50%);
+      width: 6px; height: 6px; border-radius: 50%; background: #10b981;
+      box-shadow: 0 0 0 0 rgba(16,185,129,0.6);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.6); }
+      70%  { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+      100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+    }
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+  </style>
+</head>
+<body class="bg-white text-ink">
+
+  <!-- ====================== 顶部导航 ====================== -->
+  <header class="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-line">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex flex items-center justify-center text-white font-black text-lg shadow-cta">D</div>
+        <div>
+          <div class="font-bold text-ink">AI 一键部署</div>
+          <div class="text-xs text-muted -mt-0.5">Deploy Skill Platform</div>
+        </div>
+      </div>
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="#install" class="text-ink hover:text-brand-500 font-medium transition">安装指南</a>
+        <a href="#dashboard" class="text-muted hover:text-brand-500 transition">数据看板</a>
+        <a href="#features" class="text-muted hover:text-brand-500 transition">核心能力</a>
+        <a href="#faq" class="text-muted hover:text-brand-500 transition">常见问题</a>
+      </nav>
+      <div class="flex items-center gap-3 text-xs text-muted">
+        <span class="relative inline-block">
+          <span class="pulse-dot relative"></span>
+          服务运行中
+        </span>
+        <span class="px-2 py-0.5 rounded bg-brand-50 text-brand-600 font-medium">v1.0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ====================== Hero ====================== -->
+  <section class="hero-bg grid-bg">
+    <div class="max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-50 text-brand-600 text-sm font-medium mb-6">
+        <span>🚀</span>
+        <span>面向 Cursor / Cline / Claude Code 等 15+ AI Agent</span>
+      </div>
+      <h1 class="text-5xl md:text-6xl font-black text-ink leading-tight mb-6">
+        一句话，<span class="text-brand-500">应用上云</span>
+      </h1>
+      <p class="text-lg md:text-xl text-muted max-w-3xl mx-auto leading-relaxed mb-8">
+        接入 Deploy Skill，在 AI 对话中快速打包本地项目、自动部署到云端、获取线上域名。
+        绝不动用户代码，Token 仅本地存储，安全可控。
+      </p>
+      <div class="flex items-center justify-center gap-4">
+        <a href="#install" class="px-8 py-3.5 rounded-lg bg-brand-500 text-white font-semibold shadow-cta hover:bg-brand-600 transition">
+          立即开始 →
+        </a>
+        <a href="https://github.com/ys395853952/Skill_Object" target="_blank"
+           class="px-8 py-3.5 rounded-lg bg-white border border-line text-ink font-semibold hover:border-brand-500 hover:text-brand-500 transition">
+          GitHub 仓库
+        </a>
+      </div>
+      <div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
+        <div>
+          <div class="text-3xl font-black text-ink" id="statUsers">0</div>
+          <div class="text-xs text-muted mt-1">注册用户</div>
+        </div>
+        <div>
+          <div class="text-3xl font-black text-ink" id="statTasks">0</div>
+          <div class="text-xs text-muted mt-1">部署任务</div>
+        </div>
+        <div>
+          <div class="text-3xl font-black text-ink">6</div>
+          <div class="text-xs text-muted mt-1">风险扫描规则</div>
+        </div>
+        <div>
+          <div class="text-3xl font-black text-ink">15+</div>
+          <div class="text-xs text-muted mt-1">兼容 Agent</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== 安装指南（极简一行命令）====================== -->
+  <section id="install" class="py-20 bg-white">
+    <div class="max-w-5xl mx-auto px-6">
+      <div class="text-center mb-10">
+        <h2 class="text-4xl font-black mb-3">安装 Skill</h2>
+        <p class="text-muted">复制下方命令 → 粘贴到终端 → 按提示输入 Token → 完成</p>
+      </div>
+
+      <!-- 注册账号 + 获取 Token -->
+      <div class="bg-gradient-to-br from-brand-50 to-white border border-brand-100 rounded-2xl p-8 mb-8 shadow-card">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-full bg-brand-500 text-white flex items-center justify-center font-black text-lg">1</div>
+          <h3 class="font-bold text-xl">先在这里注册账号，拿到 Token</h3>
+        </div>
+        <div class="grid md:grid-cols-3 gap-4 items-end">
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-muted mb-2">用户名</label>
+            <input id="username" type="text" placeholder="如 alice（用于生成专属域名）" maxlength="30"
+                   class="w-full px-4 py-3 rounded-lg border border-line focus:border-brand-500 focus:outline-none text-base">
+          </div>
+          <button onclick="registerUser()"
+                  class="px-6 py-3 rounded-lg bg-brand-500 text-white text-base font-semibold shadow-cta hover:bg-brand-600 transition">
+            注册并生成 Token →
+          </button>
+        </div>
+        <div id="registerResult" class="mt-4"></div>
+      </div>
+
+      <!-- 一行安装命令 -->
+      <div class="bg-ink rounded-2xl p-8 shadow-card">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-full bg-brand-500 text-white flex items-center justify-center font-black text-lg">2</div>
+          <h3 class="font-bold text-xl text-white">复制这一行命令发给用户</h3>
+        </div>
+
+        <div class="code-block text-green-300 text-sm leading-relaxed mb-4 break-all" id="oneLineCmd">
+          npx skills add Lumin-Ys/Skill_Object -y -g <span class="text-gray-500">&&</span> node ~/.agents/skills/deploy-skill/index.js <span class="text-yellow-300">--setup</span>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <button onclick="copyOneLine(this)"
+                  class="px-6 py-3 rounded-lg bg-brand-500 text-white font-semibold hover:bg-brand-600 transition shadow-cta">
+            📋 一键复制
+          </button>
+          <button onclick="copyOneLineWin(this)"
+                  class="px-6 py-3 rounded-lg bg-white text-ink font-semibold hover:bg-gray-100 transition">
+            🪟 Windows CMD 版
+          </button>
+          <span class="text-gray-400 text-sm flex items-center ml-auto">
+            粘贴到终端后，会自动装依赖 + 提示输入 Token
+          </span>
+        </div>
+      </div>
+
+      <!-- 下一步提示 -->
+      <div class="mt-8 bg-green-50 border border-green-200 rounded-2xl p-6 flex items-start gap-4">
+        <div class="text-3xl">🎉</div>
+        <div>
+          <h4 class="font-bold text-lg text-green-900 mb-1">安装完成后</h4>
+          <p class="text-green-800">打开 Cursor，对 AI 说：<code class="code-block bg-white px-2 py-0.5 rounded border border-green-200 text-green-700 font-semibold">帮我部署上线</code></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== 数据看板 ====================== -->
+  <section id="dashboard" class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex items-end justify-between mb-8">
+        <div>
+          <h2 class="text-4xl font-black mb-2">数据看板</h2>
+          <p class="text-muted">实时查看用户与部署任务</p>
+        </div>
+        <button onclick="loadAll()"
+                class="px-4 py-2 rounded-lg bg-white border border-line text-sm hover:border-brand-500 hover:text-brand-500 transition">
+          🔄 刷新
+        </button>
+      </div>
+
+      <!-- Users Table -->
+      <div class="bg-white rounded-2xl shadow-card border border-line overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b border-line flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h3 class="font-bold text-lg">已注册用户</h3>
+            <span class="px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 text-xs font-semibold" id="userCount">0</span>
+          </div>
+          <span class="text-xs text-muted">每 3 秒自动刷新</span>
+        </div>
+        <div id="userList" class="p-6 text-center text-muted text-sm">加载中...</div>
+      </div>
+
+      <!-- Tasks Table -->
+      <div class="bg-white rounded-2xl shadow-card border border-line overflow-hidden">
+        <div class="px-6 py-4 border-b border-line flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h3 class="font-bold text-lg">部署任务</h3>
+            <span class="px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 text-xs font-semibold" id="taskCount">0</span>
+          </div>
+          <span class="text-xs text-muted">最近任务优先</span>
+        </div>
+        <div id="taskList" class="p-6 text-center text-muted text-sm">加载中...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== 核心能力 ====================== -->
+  <section id="features" class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="text-4xl font-black mb-3">核心能力</h2>
+        <p class="text-muted">Skill 内置的安全检测与自动化流程</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="group p-8 rounded-2xl border border-line hover:border-brand-500 hover:shadow-card transition">
+          <div class="w-14 h-14 rounded-xl bg-brand-50 text-brand-500 flex items-center justify-center text-2xl mb-4 group-hover:bg-brand-500 group-hover:text-white transition">🛡️</div>
+          <h4 class="font-bold text-lg mb-2">风险扫描</h4>
+          <p class="text-sm text-muted leading-relaxed">扫描后端监听 127.0.0.1（严重）、前端硬编码 localhost（警告），多语言支持，绝不修改用户代码。</p>
+        </div>
+        <div class="group p-8 rounded-2xl border border-line hover:border-brand-500 hover:shadow-card transition">
+          <div class="w-14 h-14 rounded-xl bg-brand-50 text-brand-500 flex items-center justify-center text-2xl mb-4 group-hover:bg-brand-500 group-hover:text-white transition">📦</div>
+          <h4 class="font-bold text-lg mb-2">智能打包</h4>
+          <p class="text-sm text-muted leading-relaxed">自动过滤 node_modules、.git、dist、.env 等大文件夹和隐私文件，压缩上传，毫秒级完成。</p>
+        </div>
+        <div class="group p-8 rounded-2xl border border-line hover:border-brand-500 hover:shadow-card transition">
+          <div class="w-14 h-14 rounded-xl bg-brand-50 text-brand-500 flex items-center justify-center text-2xl mb-4 group-hover:bg-brand-500 group-hover:text-white transition">⚡</div>
+          <h4 class="font-bold text-lg mb-2">一键部署</h4>
+          <p class="text-sm text-muted leading-relaxed">用户只需说「帮我部署上线」，AI 自动完成上传、构建、容器、HTTPS、域名分发。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== FAQ ====================== -->
+  <section id="faq" class="py-20 bg-gray-50">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="text-4xl font-black mb-3">常见问题</h2>
+        <p class="text-muted">关于安全、费用与使用方式</p>
+      </div>
+
+      <div class="space-y-3">
+        <details class="bg-white rounded-xl border border-line p-5 hover:shadow-card transition">
+          <summary class="flex items-center justify-between font-semibold">
+            <span>Token 会被上传到 LLM 对话里吗？</span>
+            <span class="text-muted text-xl">+</span>
+          </summary>
+          <p class="mt-3 text-sm text-muted leading-relaxed">不会。Token 仅保存在用户本地的 <code class="code-block bg-gray-100 px-1.5 py-0.5 rounded text-brand-600">~/.ai-deploy-skill/config.json</code> 文件中，权限 0600。Skill 在执行时直接读取本地文件，不经过对话输出，也不通过 LLM。</p>
+        </details>
+
+        <details class="bg-white rounded-xl border border-line p-5 hover:shadow-card transition">
+          <summary class="flex items-center justify-between font-semibold">
+            <span>Skill 会修改我的项目代码吗？</span>
+            <span class="text-muted text-xl">+</span>
+          </summary>
+          <p class="mt-3 text-sm text-muted leading-relaxed">绝不修改。Skill 只做「扫描 + 提示」，所有写入操作都限定在自己的临时目录（如 <code class="code-block bg-gray-100 px-1.5 py-0.5 rounded text-brand-600">/tmp/deploy-*.zip</code>），不会触碰用户项目。</p>
+        </details>
+
+        <details class="bg-white rounded-xl border border-line p-5 hover:shadow-card transition">
+          <summary class="flex items-center justify-between font-semibold">
+            <span>检测到 127.0.0.1 还能继续部署吗？</span>
+            <span class="text-muted text-xl">+</span>
+          </summary>
+          <p class="mt-3 text-sm text-muted leading-relaxed">默认会阻断（退出码 2），等用户修复或显式 <code class="code-block bg-gray-100 px-1.5 py-0.5 rounded text-brand-600">--force</code> 强制继续。但 127.0.0.1 部署后外网无法访问，建议改为 <code class="code-block bg-gray-100 px-1.5 py-0.5 rounded text-brand-600">0.0.0.0</code>。</p>
+        </details>
+
+        <details class="bg-white rounded-xl border border-line p-5 hover:shadow-card transition">
+          <summary class="flex items-center justify-between font-semibold">
+            <span>支持哪些 Agent？</span>
+            <span class="text-muted text-xl">+</span>
+          </summary>
+          <p class="mt-3 text-sm text-muted leading-relaxed">Skill 通过 <code class="code-block bg-gray-100 px-1.5 py-0.5 rounded text-brand-600">npx skills</code>（vercel-labs）分发，已实测兼容 Claude Code / Cursor / Cline / Amp / Codex 等 15+ 主流 Agent。</p>
+        </details>
+
+        <details class="bg-white rounded-xl border border-line p-5 hover:shadow-card transition">
+          <summary class="flex items-center justify-between font-semibold">
+            <span>本机调试模式怎么用？</span>
+            <span class="text-muted text-xl">+</span>
+          </summary>
+          <p class="mt-3 text-sm text-muted leading-relaxed">通过环境变量指定后端地址：<br><code class="code-block bg-gray-100 px-1.5 py-0.5 rounded text-brand-600">DEPLOY_API_BASE=http://localhost:3000 node index.js</code>。适合本地调试和演示。</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== 底部 ====================== -->
+  <footer class="border-t border-line py-8">
+    <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted">
+      <div>AI 一键部署 Skill · 由社区驱动</div>
+      <div class="flex items-center gap-6">
+        <a href="https://github.com/ys395853952/Skill_Object" target="_blank" class="hover:text-brand-500 transition">GitHub</a>
+        <a href="https://github.com/ys395853952/Skill_Object/blob/main/SKILL.md" target="_blank" class="hover:text-brand-500 transition">SKILL.md</a>
+        <a href="https://github.com/ys395853952/Skill_Object/blob/main/README.md" target="_blank" class="hover:text-brand-500 transition">README</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ====================== JS ====================== -->
+  <script>
+    async function registerUser() {
+      const name = document.getElementById('username').value.trim();
+      if (!name) return alert('请输入用户名');
+      const r = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await r.json();
+      if (!r.ok) return alert('注册失败：' + (data.error || r.statusText));
+
+      document.getElementById('registerResult').innerHTML = `
+        <div class="bg-ink text-green-300 rounded-lg p-3 text-xs space-y-1.5 code-block">
+          <div class="text-gray-500">// Token（仅显示一次，请妥善保存）</div>
+          <div class="break-all">${data.token}</div>
+          <div class="text-gray-500 mt-2">// 你的专属部署域名</div>
+          <div>${data.domain}</div>
+        </div>
+        <div class="flex gap-2 mt-3">
+          <button onclick="copyText('${data.token}', this)"
+                  class="flex-1 py-2 rounded bg-brand-50 text-brand-600 text-xs font-semibold hover:bg-brand-100 transition">
+            📋 复制 Token
+          </button>
+          <button onclick="copyFullInstall('${data.token}', this)"
+                  class="flex-1 py-2 rounded bg-brand-500 text-white text-xs font-semibold hover:bg-brand-600 transition">
+            🚀 复制完整安装命令
+          </button>
+        </div>`;
+      loadAll();
+    }
+
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        if (btn) {
+          const orig = btn.innerHTML;
+          btn.innerHTML = '✓ 已复制';
+          setTimeout(() => btn.innerHTML = orig, 1200);
+        }
+      }).catch(() => {
+        // 降级：execCommand 兼容旧浏览器/无 HTTPS 场景
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (btn) {
+          const orig = btn.innerHTML;
+          btn.innerHTML = '✓ 已复制';
+          setTimeout(() => btn.innerHTML = orig, 1200);
+        }
+      });
+    }
+
+    // === 一行安装命令（首次安装、还没有 Token 时用）===
+    function copyOneLine(btn) {
+      const cmd = 'npx skills add Lumin-Ys/Skill_Object -y -g && node ~/.agents/skills/deploy-skill/index.js --setup';
+      copyText(cmd, btn);
+    }
+    function copyOneLineWin(btn) {
+      // Windows CMD/PowerShell 需要把 && 改成 ; 并避免使用波浪号路径
+      const cmd = 'npx skills add Lumin-Ys/Skill_Object -y -g & node "%USERPROFILE%\\.agents\\skills\\deploy-skill\\index.js" --setup';
+      copyText(cmd, btn);
+    }
+
+    // === 注册成功后的完整命令（带 Token）===
+    function copyFullInstall(token, btn) {
+      const cmd = `# 一行命令：自动装 Skill + 自动装依赖 + 写入 Token
+npx skills add Lumin-Ys/Skill_Object -y -g && node ~/.agents/skills/deploy-skill/index.js --token=${token}
+
+# 装完后：打开 Cursor，对 AI 说：帮我部署上线`;
+      copyText(cmd, btn);
+    }
+
+    async function loadAll() {
+      await Promise.all([loadUsers(), loadTasks(), updateStats()]);
+    }
+
+    async function updateStats() {
+      const [u, t] = await Promise.all([
+        fetch('/api/admin/users').then(r => r.json()),
+        fetch('/api/admin/tasks').then(r => r.json()),
+      ]);
+      animateNumber('statUsers', u.users.length);
+      animateNumber('statTasks', t.tasks.length);
+    }
+
+    function animateNumber(id, target) {
+      const el = document.getElementById(id);
+      const cur = parseInt(el.textContent) || 0;
+      if (cur === target) return;
+      const step = target > cur ? 1 : -1;
+      const timer = setInterval(() => {
+        const v = parseInt(el.textContent) || 0;
+        if (v === target) { clearInterval(timer); return; }
+        el.textContent = v + step;
+      }, 40);
+    }
+
+    async function loadUsers() {
+      const r = await fetch('/api/admin/users');
+      const { users } = await r.json();
+      document.getElementById('userCount').textContent = users.length;
+      if (users.length === 0) {
+        document.getElementById('userList').innerHTML = '<div class="py-8 text-muted">还没有用户</div>';
+        return;
+      }
+      document.getElementById('userList').innerHTML = `
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs text-muted uppercase border-b border-line">
+              <th class="text-left pb-3 px-2 font-semibold">用户名</th>
+              <th class="text-left pb-3 px-2 font-semibold">专属域名</th>
+              <th class="text-left pb-3 px-2 font-semibold">Token</th>
+              <th class="text-left pb-3 px-2 font-semibold">注册时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${users.map(u => `
+              <tr class="border-b border-line last:border-0 hover:bg-gray-50 transition">
+                <td class="py-3 px-2 font-semibold text-ink">${escapeHtml(u.name)}</td>
+                <td class="py-3 px-2"><span class="text-brand-500">${u.domain}</span></td>
+                <td class="py-3 px-2 code-block text-xs text-muted">${u.token.slice(0,16)}…${u.token.slice(-8)}</td>
+                <td class="py-3 px-2 text-muted">${new Date(u.createdAt).toLocaleString('zh-CN')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    async function loadTasks() {
+      const r = await fetch('/api/admin/tasks');
+      const { tasks } = await r.json();
+      document.getElementById('taskCount').textContent = tasks.length;
+      if (tasks.length === 0) {
+        document.getElementById('taskList').innerHTML = '<div class="py-8 text-muted">还没有部署任务</div>';
+        return;
+      }
+      document.getElementById('taskList').innerHTML = `
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs text-muted uppercase border-b border-line">
+              <th class="text-left pb-3 px-2 font-semibold">任务</th>
+              <th class="text-left pb-3 px-2 font-semibold">用户</th>
+              <th class="text-left pb-3 px-2 font-semibold">类型</th>
+              <th class="text-left pb-3 px-2 font-semibold">状态</th>
+              <th class="text-left pb-3 px-2 font-semibold">进度</th>
+              <th class="text-left pb-3 px-2 font-semibold">访问</th>
+              <th class="text-left pb-3 px-2 font-semibold">创建</th>
+              <th class="text-right pb-3 px-2 font-semibold">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tasks.map(t => `
+              <tr class="border-b border-line last:border-0 hover:bg-gray-50 transition">
+                <td class="py-3 px-2 code-block text-xs text-muted">${t.id.slice(0,14)}…</td>
+                <td class="py-3 px-2 font-semibold">${escapeHtml(t.userName || t.userId)}</td>
+                <td class="py-3 px-2">${t.projectType ? `<span class="px-2 py-0.5 rounded bg-gray-100 text-xs">${t.projectType}</span>` : '-'}</td>
+                <td class="py-3 px-2"><span class="${badgeClass(t.status)}">${t.status}</span><div class="text-xs text-muted mt-0.5">${t.message||''}</div></td>
+                <td class="py-3 px-2">
+                  <div class="text-xs">${t.progress || 0}%</div>
+                  <div class="w-20 h-1 bg-gray-100 rounded mt-1 overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-brand-500 to-brand-700" style="width:${t.progress || 0}%"></div>
+                  </div>
+                </td>
+                <td class="py-3 px-2">${t.url ? `<a href="/sites/${t.id}/" target="_blank" class="text-brand-500 hover:underline text-xs">${t.url}</a>` : '-'}</td>
+                <td class="py-3 px-2 text-xs text-muted">${new Date(t.createdAt).toLocaleString('zh-CN')}</td>
+                <td class="py-3 px-2 text-right">
+                  <button onclick="deleteTask('${t.id}')" class="text-xs text-red-500 hover:text-red-700 font-medium">删除</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    function badgeClass(status) {
+      const map = {
+        success: 'inline-block px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold',
+        failed:  'inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold',
+        pending: 'inline-block px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold',
+      };
+      return map[status] || 'inline-block px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold';
+    }
+
+    async function deleteTask(id) {
+      if (!confirm('确认删除任务？')) return;
+      await fetch('/api/admin/tasks/' + id, { method: 'DELETE' });
+      loadAll();
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    }
+
+    // 自动刷新（仅当页面可见时）
+    setInterval(() => {
+      if (document.visibilityState === 'visible') loadAll();
+    }, 3000);
+
+    loadAll();
+
+    // 平滑滚动
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const t = document.querySelector(a.getAttribute('href'));
+        if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
+    });
+  </script>
+</body>
+</html>
