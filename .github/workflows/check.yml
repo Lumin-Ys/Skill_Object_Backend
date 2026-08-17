@@ -1,0 +1,36 @@
+name: Check Server Status
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check server status
+        run: |
+          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'ENDSSH'
+            echo "=== 当前运行的 PM2 进程 ==="
+            pm2 list
+
+            echo ""
+            echo "=== /root 目录内容 ==="
+            ls -la /root/
+
+            echo ""
+            echo "=== Skill_Object_Backend 目录 ==="
+            ls -la /root/Skill_Object_Backend/
+
+            echo ""
+            echo "=== 端口占用 ==="
+            netstat -tlnp | grep LISTEN
+
+            echo ""
+            echo "=== Nginx 配置 ==="
+            cat /etc/nginx/sites-enabled/aeladder.store 2>/dev/null || echo "Nginx 配置不存在"
+
+            echo ""
+            echo "=== PM2 日志（最近20行）==="
+            pm2 logs skill-backend --lines 20 --nostream 2>/dev/null || echo "skill-backend 进程不存在"
+          ENDSSH
