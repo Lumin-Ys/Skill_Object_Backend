@@ -16,127 +16,45 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
-      - name: Switch domain to Skill_Object_Backend
+      - name: Pull and restart skill-backend
         env:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
-          DOMAIN: ${{ secrets.DOMAIN }}
         run: |
           set -euo pipefail
-          DOMAIN_NAME="${DOMAIN:-aeladder.store}"
-          # bash -l：走登录壳，才能读到 nvm / /usr/sbin / pm2
           sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no \
-            "root@${SERVER_IP}" \
-            "export DOMAIN_NAME='${DOMAIN_NAME}'; bash -l -s" << 'ENDSSH'
+            "root@${SERVER_IP}" "bash -l -s" << 'ENDSSH'
           set -euo pipefail
-          set -x
           export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
-          export NVM_DIR="${HOME}/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          [ -s /root/.nvm/nvm.sh ] && . /root/.nvm/nvm.sh
-          for d in /root/.nvm/versions/node/*/bin /usr/local/node*/bin; do
-            [ -d "$d" ] && export PATH="$d:$PATH"
-          done
 
-          echo "PATH=$PATH"
-          command -v git || { echo "git not found"; exit 127; }
-          command -v node || { echo "node not found"; exit 127; }
-          command -v npm || { echo "npm not found"; exit 127; }
-          NGINX_BIN="$(command -v nginx || true)"
-          [ -z "$NGINX_BIN" ] && [ -x /usr/sbin/nginx ] && NGINX_BIN=/usr/sbin/nginx
-          [ -n "$NGINX_BIN" ] || { echo "nginx not found"; exit 127; }
+          if ! command -v git >/dev/null 2>&1; then
+            dnf install -y git || yum install -y git
+          fi
+          if ! command -v pm2 >/dev/null 2>&1; then
+            npm install -g pm2
+          fi
 
           APP_DIR=/root/Skill_Object_Backend
-          DOMAIN_NAME="${DOMAIN_NAME:-aeladder.store}"
           REPO_URL=https://github.com/Lumin-Ys/Skill_Object_Backend.git
-
           if [ ! -d "$APP_DIR/.git" ]; then
-            rm -rf "$APP_DIR"
             git clone "$REPO_URL" "$APP_DIR"
           fi
-
           cd "$APP_DIR"
-          git remote set-url origin "$REPO_URL" || true
+          git remote set-url origin "$REPO_URL"
           git fetch origin main
-          git checkout -B main origin/main
           git reset --hard origin/main
           npm install --production --ignore-scripts
-          command -v pm2 >/dev/null 2>&1 || npm install -g pm2
-          hash -r || true
 
-          pm2 delete skill-backend || true
-          if command -v fuser >/dev/null 2>&1; then
-            fuser -k 3000/tcp || true
-          elif [ -x /usr/sbin/fuser ]; then
-            /usr/sbin/fuser -k 3000/tcp || true
+          if pm2 describe skill-backend >/dev/null 2>&1; then
+            pm2 restart skill-backend --update-env
+          else
+            PORT=3000 pm2 start server.js --name skill-backend --update-env
           fi
-          set +e
-          SS_BIN="$(command -v ss || echo /usr/sbin/ss)"
-          PIDS=""
-          if [ -x "$SS_BIN" ]; then
-            PIDS=$("$SS_BIN" -lntp 2>/dev/null | sed -n 's/.*:3000 .*pid=\([0-9][0-9]*\).*/\1/p' | sort -u)
-          fi
-          if [ -z "$PIDS" ] && command -v netstat >/dev/null 2>&1; then
-            PIDS=$(netstat -lntp 2>/dev/null | awk '/:3000 /{print $7}' | cut -d/ -f1 | sort -u)
-          fi
-          if [ -n "$PIDS" ]; then
-            echo "$PIDS" | xargs kill -9
-            sleep 1
-          fi
-          set -e
-
-          cd "$APP_DIR"
-          PORT=3000 pm2 start server.js --name skill-backend --update-env
           pm2 save || true
 
-          VHOST_FILE=/tmp/${DOMAIN_NAME}.nginx
-          printf '%s\n' \
-            "server {" \
-            "    listen 80;" \
-            "    server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};" \
-            "    location / {" \
-            "        proxy_pass http://127.0.0.1:3000;" \
-            "        proxy_http_version 1.1;" \
-            "        proxy_set_header Upgrade \$http_upgrade;" \
-            "        proxy_set_header Connection \"upgrade\";" \
-            "        proxy_set_header Host \$host;" \
-            "        proxy_set_header X-Real-IP \$remote_addr;" \
-            "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;" \
-            "        proxy_cache_bypass \$http_upgrade;" \
-            "    }" \
-            "}" > "$VHOST_FILE"
-
-          mkdir -p /etc/nginx/conf.d
-          cp "$VHOST_FILE" "/etc/nginx/conf.d/${DOMAIN_NAME}.conf"
-
-          if [ -d /etc/nginx/sites-available ]; then
-            cp "$VHOST_FILE" "/etc/nginx/sites-available/${DOMAIN_NAME}"
-            mkdir -p /etc/nginx/sites-enabled
-            ln -sfn "/etc/nginx/sites-available/${DOMAIN_NAME}" "/etc/nginx/sites-enabled/${DOMAIN_NAME}"
-            rm -f /etc/nginx/sites-enabled/default
-          fi
-
-          shopt -s nullglob
-          for f in /etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/*; do
-            [ -e "$f" ] || continue
-            base=$(basename "$f")
-            if [ "$base" = "${DOMAIN_NAME}.conf" ] || [ "$base" = "${DOMAIN_NAME}" ]; then
-              continue
-            fi
-            if grep -q "$DOMAIN_NAME" "$f" 2>/dev/null; then
-              mv "$f" "$f.bak-before-skill"
-              echo "disabled old vhost: $f"
-            fi
-          done
-
-          "$NGINX_BIN" -t
-          "$NGINX_BIN" -s reload || systemctl reload nginx || service nginx reload
-
           echo "=== local / ==="
-          curl -sI http://127.0.0.1:3000/ | head -20
-          echo "=== git ==="
+          curl -sI http://127.0.0.1:3000/ | head -15
           git log -1 --oneline
-          echo "=== pm2 ==="
           pm2 list
           echo "Deploy completed"
           ENDSSH

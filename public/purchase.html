@@ -353,7 +353,27 @@
 
     function copyNewToken() {
       if (!skillToken) return;
-      navigator.clipboard.writeText(skillToken).then(() => alert('Token 已复制'));
+      function ok() { alert('Token 已复制'); }
+      function fallback() {
+        const ta = document.createElement('textarea');
+        ta.value = skillToken;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:0;left:0;width:2em;height:2em;padding:0;border:0;opacity:0;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, skillToken.length);
+        let copied = false;
+        try { copied = document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        if (copied) ok();
+        else window.prompt('当前环境无法自动复制，请手动复制：', skillToken);
+      }
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(skillToken).then(ok).catch(fallback);
+      } else {
+        fallback();
+      }
     }
 
     ensureLogin();

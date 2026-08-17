@@ -268,7 +268,7 @@
                 <div class="text-white/70 space-y-1.5">
                   <div>风险扫描通过 · 未改动任何源代码</div>
                   <div>打包完成 · HTTPS 已启用</div>
-                  <div class="text-ice">alice.dev.local 已上线<span class="caret"></span></div>
+                  <div class="text-ice">alice.aeladder.store 已上线<span class="caret"></span></div>
                 </div>
               </div>
             </div>
@@ -636,15 +636,26 @@
         btn.innerHTML = '已复制';
         setTimeout(() => btn.innerHTML = orig, 1200);
       };
-      navigator.clipboard.writeText(text).then(done).catch(() => {
+      function fallback() {
         const ta = document.createElement('textarea');
         ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:0;left:0;width:2em;height:2em;padding:0;border:0;opacity:0;';
         document.body.appendChild(ta);
+        ta.focus();
         ta.select();
-        document.execCommand('copy');
+        ta.setSelectionRange(0, text.length);
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) {}
         document.body.removeChild(ta);
-        done();
-      });
+        if (ok) done();
+        else window.prompt('当前环境无法自动复制，请手动复制：', text);
+      }
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(text).then(done).catch(fallback);
+      } else {
+        fallback();
+      }
     }
 
     function copyInstallPrompt(btn) {

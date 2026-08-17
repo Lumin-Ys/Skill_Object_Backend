@@ -226,7 +226,7 @@
             <label class="block text-xs font-medium text-muted mb-2">默认二级域名</label>
             <div class="flex items-center gap-2">
               <input id="slugInput" class="flex-1 px-3.5 py-2.5 rounded-md border border-line text-sm font-mono" placeholder="your-app">
-              <span class="text-sm text-muted whitespace-nowrap" id="rootDomainLabel">.dev.local</span>
+              <span class="text-sm text-muted whitespace-nowrap" id="rootDomainLabel">.aeladder.store</span>
             </div>
             <p class="text-xs text-muted mt-2">3-20 位，字母开头，仅小写字母 / 数字 / 连字符。全局唯一。</p>
             <p id="slugError" class="hidden text-sm text-red-600 mt-2"></p>
@@ -290,7 +290,7 @@
           <label class="block text-xs text-muted mb-1.5">项目二级域名（可选）</label>
           <div class="flex items-center gap-2">
             <input id="editSub" class="flex-1 px-3 py-2.5 rounded-md border border-line text-sm font-mono" placeholder="留空则使用账号默认域名">
-            <span class="text-xs text-muted" id="editRoot">.dev.local</span>
+            <span class="text-xs text-muted" id="editRoot">.aeladder.store</span>
           </div>
         </div>
         <p id="editError" class="hidden text-sm text-red-600"></p>
@@ -387,8 +387,8 @@
       document.getElementById('loginName').value = u.name;
       document.getElementById('displayName').value = u.displayName || u.name;
       document.getElementById('slugInput').value = u.slug || '';
-      document.getElementById('rootDomainLabel').textContent = '.' + (u.rootDomain || 'dev.local');
-      document.getElementById('editRoot').textContent = '.' + (u.rootDomain || 'dev.local');
+      document.getElementById('rootDomainLabel').textContent = '.' + (u.rootDomain || 'aeladder.store');
+      document.getElementById('editRoot').textContent = '.' + (u.rootDomain || 'aeladder.store');
       document.getElementById('billPlan').textContent = u.subscribed ? u.planName : '未开通';
       document.getElementById('billExpire').textContent = u.subscribed ? ('有效期至 ' + new Date(u.planExpiresAt).toLocaleString('zh-CN')) : '购买后签发 Skill Token';
       document.getElementById('tokenEmpty').classList.toggle('hidden', !!u.subscribed);
@@ -447,7 +447,7 @@
         <div class="flex items-center justify-between px-5 py-3">
           <div>
             <div class="font-medium text-ink">${escapeHtml(t.name || t.id.slice(0,10))}</div>
-            <div class="text-xs text-muted mt-0.5">${escapeHtml(t.subdomain ? t.subdomain + '.' + (currentUser.rootDomain||'dev.local') : currentUser.domain)}</div>
+            <div class="text-xs text-muted mt-0.5">${escapeHtml(t.subdomain ? t.subdomain + '.' + (currentUser.rootDomain||'aeladder.store') : currentUser.domain)}</div>
           </div>
           ${statusBadge(t.status)}
         </div>`).join('')}</div>`;
@@ -492,7 +492,7 @@
     function renderDomains() {
       const custom = tasks.filter(t => t.subdomain);
       const el = document.getElementById('domainList');
-      const root = currentUser.rootDomain || 'dev.local';
+      const root = currentUser.rootDomain || 'aeladder.store';
       if (!custom.length) { el.textContent = '暂无项目级自定义域名。可在「项目」中为单个应用绑定。'; return; }
       el.innerHTML = custom.map(t => `
         <div class="flex justify-between py-2 border-b border-line last:border-0">
@@ -547,9 +547,26 @@
 
     function copyText(text, btn) {
       const done = () => { if (!btn) return; const o = btn.innerHTML; btn.innerHTML = '已复制'; setTimeout(() => btn.innerHTML = o, 1200); };
-      navigator.clipboard.writeText(text).then(done).catch(() => {
-        const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
-      });
+      function fallback() {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:0;left:0;width:2em;height:2em;padding:0;border:0;opacity:0;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        if (ok) done();
+        else window.prompt('当前环境无法自动复制，请手动复制：', text);
+      }
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(text).then(done).catch(fallback);
+      } else {
+        fallback();
+      }
     }
     function copyToken(btn) { copyText(currentUser.skillToken, btn); }
     function copyInstall(btn) {
