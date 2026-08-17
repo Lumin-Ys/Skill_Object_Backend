@@ -102,9 +102,23 @@ NGINX
           ufw allow 80/tcp 2>/dev/null || true
           ufw allow 443/tcp 2>/dev/null || true
 
-          echo "=== 7. 验证部署 ==="
+          echo "=== 7. 等待服务启动 ==="
+          sleep 3
+          for i in {1..10}; do
+            if curl -sf http://127.0.0.1:3000/ > /dev/null 2>&1; then
+              echo "✅ 服务已就绪"
+              break
+            fi
+            echo "等待服务启动... ($i/10)"
+            sleep 2
+          done
+
+          echo "=== 8. 验证部署 ==="
           echo "--- 后端状态 ---"
           curl -sI http://127.0.0.1:3000/ | head -5
+          echo ""
+          echo "--- PM2 日志 ---"
+          pm2 logs skill-backend --lines 15 --nostream 2>/dev/null || true
           echo ""
           echo "--- PM2 状态 ---"
           pm2 list
